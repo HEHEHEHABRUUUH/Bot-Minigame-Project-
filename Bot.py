@@ -1,56 +1,70 @@
-import random
 import discord
 from discord.ext import commands
+import random
 
-intents = discord.Intents.default() 
+intents = discord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-@bot.command()
-async def help_me(ctx):
-    help_message = (
-        "📌 **Perintah Bot:**\n"
-        "1. `!help_me` - Menampilkan pesan bantuan ini\n"
-        "2. `!suit <pilihan>` - Main suit (batu, kertas, gunting)\n"
-        "3. `!tebak <angka>` - Main tebak angka (1-100)\n"
-        "4"
-    )
-    
-#Suit
-@bot.command()
-async def suit(ctx, pilihan):
-    pilihan = pilihan.lower()
-    bot_choice = random.choice(["batu", "kertas", "gunting"])
+kata_list = ["python", "discord", "komputer", "internet"]
+jawaban = None
+terbuka = []  # huruf yang sudah terbuka
 
-    if pilihan not in ["batu", "kertas", "gunting"]:
-        await ctx.send("❌ Pilih: batu / kertas / gunting")
+@bot.event
+async def on_ready():
+    print(f"Bot aktif sebagai {bot.user}")
+
+@bot.command()
+async def tebak(ctx):
+    global jawaban, terbuka
+    jawaban = random.choice(kata_list)
+    terbuka = []
+
+    petunjuk = " ".join(["_" for _ in jawaban])
+    await ctx.send(f"Tebak kata:\n{petunjuk}")
+
+@bot.command()
+async def hint(ctx):
+    global jawaban, terbuka
+
+    if jawaban is None:
+        await ctx.send("Mulai dulu dengan !tebak")
         return
 
-    if pilihan == bot_choice:
-        hasil = "😐 Seri!"
-    elif (
-        (pilihan == "batu" and bot_choice == "gunting") or
-        (pilihan == "gunting" and bot_choice == "kertas") or
-        (pilihan == "kertas" and bot_choice == "batu")
-    ):
-        hasil = "🎉 Kamu menang!"
-    else:
-        hasil = "💀 Kamu kalah!"
+    # cari huruf yang belum terbuka
+    sisa = [i for i in range(len(jawaban)) if i not in terbuka]
 
-    await ctx.send(f"Kamu: {pilihan}\nBot: {bot_choice}\n{hasil}")
+    if not sisa:
+        await ctx.send("Semua huruf sudah terbuka!")
+        return
 
-#tebak angka
-number = random.randint(1, 100)
+    index = random.choice(sisa)
+    terbuka.append(index)
+
+    # tampilkan petunjuk baru
+    hasil = ""
+    for i, huruf in enumerate(jawaban):
+        if i in terbuka:
+            hasil += huruf + " "
+        else:
+            hasil += "_ "
+
+    await ctx.send(f"Hint:\n{hasil}")
+
 @bot.command()
-async def tebak(ctx, angka: int):
-    global number
-    if angka < number:
-        await ctx.send("📉 Terlalu rendah! Coba lagi.")
-    elif angka > number:
-        await ctx.send("📈 Terlalu tinggi! Coba lagi.")
-    else:
-        await ctx.send("🎉 Selamat! Kamu menebak angka yang benar.")
-        number = random.randint(1, 100)  # Reset angka untuk permainan berikutnya
+async def jawab(ctx, *, guess):
+    global jawaban, terbuka
 
-bot.run("TOken")
+    if jawaban is None:
+        await ctx.send("Mulai dulu dengan !tebak")
+        return
+
+    if guess.lower() == jawaban:
+        await ctx.send("Benar!")
+        jawaban = None
+        terbuka = []
+    else:
+        await ctx.send("Salah!")
+
+bot.run("Token Cuy")
